@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LILY</title>
+<meta name="description" content="LILY, a assistente pessoal e pequena companheira virtual da Evellin.">
+<meta name="theme-color" content="#2A1745">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<a class="skip" href="#view">Ir para o conteúdo</a>
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="#/conversar" aria-label="LILY, ir para a conversa">
+      <img class="avatar avatar-md" src="assets/lily-avatar.png" alt="" width="44" height="44">
+      <span class="brand-text"><strong>LILY</strong><small id="presence">Disponível</small></span>
+    </a>
+    <span class="mode" id="mode" role="status"><i></i><span>Online</span></span>
+    <div class="menu-wrap">
+      <button class="icon-btn" id="menuBtn" aria-label="Configurações" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-2.5c.1-.3.1-.7.1-1s0-.7-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6c-.1.3-.1.7-.1 1s0 .7.1 1l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6Z"/></svg>
+      </button>
+      <div class="menu" id="menu" hidden>
+        <a href="#/minha-lily">Perfil e preferências</a>
+        <a href="#/minha-lily/memoria">Memória da LILY</a>
+        <button id="menuNew">Nova conversa</button>
+        <button id="menuInstall" hidden>Instalar no celular</button>
+      </div>
+    </div>
+  </header>
+  <nav class="nav" id="nav" aria-label="Principal"></nav>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
