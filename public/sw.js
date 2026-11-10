@@ -1,4 +1,4 @@
-const VERSION = 'lily-v2';
+const VERSION = 'lily-v3';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css',
   'js/main.js', 'js/ui.js', 'js/store.js', 'js/services/lily-service.js', 'js/services/research-service.js', 'js/services/device-capabilities.js',

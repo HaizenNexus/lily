@@ -65,10 +65,40 @@ export function newConv(title = 'Nova conversa') {
 }
 export const current = () => state.convs.find(c => c.id === state.currentId);
 export function resetAll() {
-  clearTimeout(timer); db?.close();
-  try { localStorage.removeItem(LS_KEY); localStorage.removeItem('lily:code'); } catch { /* ignora */ }
-  const r = indexedDB.deleteDatabase(DB_NAME);
-  r.onsuccess = r.onerror = r.onblocked = () => location.reload();
+    clearTimeout(timer);
+
+    if (db) {
+        db.close();
+        db = null;
+    }
+
+    try {
+        localStorage.removeItem(LS_KEY);
+        localStorage.removeItem('lily:code');
+    } catch (error) {
+        console.error('Erro ao limpar armazenamento:', error);
+    }
+
+    if (!('indexedDB' in globalThis)) {
+        location.reload();
+        return;
+    }
+
+    const r = indexedDB.deleteDatabase(DB_NAME);
+
+    r.onsuccess = () => {
+        location.reload();
+    };
+
+    r.onerror = () => {
+        console.error('Erro ao excluir IndexedDB:', r.error);
+        alert('Não foi possível limpar os dados. Tente novamente.');
+    };
+
+    r.onblocked = () => {
+        alert('A limpeza está aguardando. Feche outras abas da LILY.');
+    };
 }
+
 
 await load();
