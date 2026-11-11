@@ -1,11 +1,10 @@
 
-const VERSION = 'lily-static-v1';
+const VERSION = 'lily-static-v2';
 
 const SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/assets/lily-avatar.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
   '/assets/icon-maskable-512.png'

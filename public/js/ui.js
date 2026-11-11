@@ -1,4 +1,6 @@
-export const AVATAR = 'assets/lily-avatar.png';
+import lilyAvatar from '../assets/lily-avatar.png';
+
+export const AVATAR = lilyAvatar;
 
 /** Cria elementos DOM sem innerHTML (evita injeção de HTML vindo do usuário). */
 export function h(tag, props = {}, ...kids) {
