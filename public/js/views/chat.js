@@ -2,6 +2,7 @@ import { h, avatar, AVATAR, toast } from '../ui.js';
 import { state, save, current, newConv } from '../store.js';
 import { LilyService, describeError } from '../services/lily-service.js';
 import { ResearchService } from '../services/research-service.js';
+import { OfflineLLM } from '../services/offline-llm.js';
 
 const GREETING = [
   'Olá, Evellin! Meu nome é Lily! :3',
@@ -73,62 +74,42 @@ export function chatView(root) {
     const history = c.messages.filter(m => m.role === 'user' || m.role === 'lily')
       .map(m => ({ role: m.role === 'lily' ? 'assistant' : 'user', content: m.text }));
 
+    
 let msg = null, bodyEl = null;
 let researchContext = '';
 
-try {
-  // Verifica se a pergunta precisa de pesquisa na internet.
-  if (ResearchService.shouldResearch(text)) {
-    const dots = typing.querySelector('.dots');
+const setTypingStatus = (message) => {
+  const currentStatus = typing.querySelector('.research-status');
 
-if (dots) {
-  dots.setAttribute(
-    'aria-label',
-    'A Lily está pesquisando na internet'
-  );
-
-  const status = h(
-  'span',
-  {
-    class: 'research-status',
-    role: 'status',
-    'aria-live': 'polite'
-  },
-  'Pesquisando na internet...'
-);
-
-  dots.replaceWith(status);
-}
-
-    // Pesquisa na Tavily.
-    const research = await ResearchService.search(text, {
-      signal: aborter.signal
-    });
-
-    // Prepara os resultados para a inteligência artificial.
-    researchContext = ResearchService.formatForModel(research);
-    if (typing.isConnected) {
-  const status = typing.querySelector('.research-status');
-
-  if (status) {
-    status.textContent = 'Analisando os resultados...';
-  }
-}
+  if (currentStatus) {
+    currentStatus.textContent = message;
+    return;
   }
 
-  // Envia a conversa para a inteligência artificial.
-  for await (const chunk of LilyService.stream({
-    messages: history,
-    settings: state.settings,
-    memories: state.settings.useMemories ? state.memories : [],
-    researchContext,
-    signal: aborter.signal
-  })) {
+  const dots = typing.querySelector('.dots');
+
+  if (dots) {
+    dots.setAttribute('aria-label', message);
+
+    dots.replaceWith(
+      h('span', {
+        class: 'research-status',
+        role: 'status',
+        'aria-live': 'polite'
+      }, message)
+    );
+  }
+};
+
+// Processa os pedaços da resposta tanto online quanto offline.
+const consume = async (stream, offline = false) => {
+  for await (const chunk of stream) {
     if (!msg) {
       msg = {
         role: 'lily',
         text: '',
-        ts: Date.now()
+        ts: Date.now(),
+        offline
       };
 
       c.messages.push(msg);
@@ -144,15 +125,116 @@ if (dots) {
     bodyEl.textContent = msg.text;
     bottom();
   }
+};
+
+// Prepara e executa a IA local.
+const runOffline = async (statusText) => {
+  setTypingStatus(statusText);
+
+  if (!OfflineLLM.isLoaded()) {
+    const cached = await OfflineLLM.hasCachedModel();
+
+    if (!cached) {
+      const error = new Error('offline_model_not_installed');
+      error.code = 'offline_model_not_installed';
+      throw error;
+    }
+
+    setTypingStatus('Carregando modelo local...');
+
+    await OfflineLLM.load();
+  }
+
+  setTypingStatus('A LILY está pensando pela IA local...');
+
+  await consume(
+    OfflineLLM.stream({
+      messages: history,
+      settings: state.settings,
+      memories: state.settings.useMemories
+        ? state.memories
+        : [],
+      signal: aborter.signal
+    }),
+    true
+  );
+};
+
+try {
+  const online = navigator.onLine !== false;
+
+  if (!online) {
+    // Sem internet: utiliza o modelo instalado no aparelho.
+    await runOffline(
+      'Sem internet. Preparando a IA local...'
+    );
+
+  } else {
+    // Com internet: mantém Groq e Tavily.
+    try {
+      if (ResearchService.shouldResearch(text)) {
+        setTypingStatus('Pesquisando na internet...');
+
+        const research = await ResearchService.search(text, {
+          signal: aborter.signal
+        });
+
+        researchContext =
+          ResearchService.formatForModel(research);
+
+        setTypingStatus('Analisando os resultados...');
+      }
+
+      await consume(
+        LilyService.stream({
+          messages: history,
+          settings: state.settings,
+          memories: state.settings.useMemories
+            ? state.memories
+            : [],
+          researchContext,
+          signal: aborter.signal
+        })
+      );
+
+    } catch (onlineError) {
+      // Só utiliza o modelo local se houver falha de rede
+      // e nenhuma parte da resposta online tiver sido gerada.
+      const networkFailure = [
+        'network',
+        'research_network'
+      ].includes(onlineError.code);
+
+      if (
+        !networkFailure ||
+        msg ||
+        aborter.signal.aborted
+      ) {
+        throw onlineError;
+      }
+
+      if (!(await OfflineLLM.hasCachedModel())) {
+        throw onlineError;
+      }
+
+      await runOffline(
+        'Conexão online indisponível. Usando IA local...'
+      );
+    }
+  }
 
 } catch (err) {
   typing.remove();
 
   if (err.name !== 'AbortError') {
+    const message = err.code === 'offline_model_not_installed'
+      ? 'O modelo offline ainda não está instalado neste aparelho. Conecte-se à internet e baixe o modelo em Minha LILY → Modo offline.'
+      : describeError(err);
+
     c.messages.push({
       role: 'notice',
       ts: Date.now(),
-      text: describeError(err)
+      text: message
     });
   }
 
@@ -163,7 +245,6 @@ if (dots) {
   draw();
   grow();
 }
-
   }
 
   root.append(h('div', { class: 'view' }, thread, h('div', { class: 'composer' }, form)));

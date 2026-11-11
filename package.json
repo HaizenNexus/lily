@@ -2,6 +2,22 @@
   "name": "lily",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
-  "scripts": { "test": "node --test tests/*.test.mjs", "dev": "vercel dev" }
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "dev": "vercel dev",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.88",
+    "@wllama/wllama": "^3.13.0"
+  },
+  "devDependencies": {
+    "vite": "^7.3.8"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }
