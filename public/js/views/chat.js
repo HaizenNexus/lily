@@ -79,10 +79,26 @@ let researchContext = '';
 try {
   // Verifica se a pergunta precisa de pesquisa na internet.
   if (ResearchService.shouldResearch(text)) {
-    typing.querySelector('.dots')?.setAttribute(
-      'aria-label',
-      'A Lily está pesquisando na internet'
-    );
+    const dots = typing.querySelector('.dots');
+
+if (dots) {
+  dots.setAttribute(
+    'aria-label',
+    'A Lily está pesquisando na internet'
+  );
+
+  const status = h(
+  'span',
+  {
+    class: 'research-status',
+    role: 'status',
+    'aria-live': 'polite'
+  },
+  'Pesquisando na internet...'
+);
+
+  dots.replaceWith(status);
+}
 
     // Pesquisa na Tavily.
     const research = await ResearchService.search(text, {
@@ -91,6 +107,13 @@ try {
 
     // Prepara os resultados para a inteligência artificial.
     researchContext = ResearchService.formatForModel(research);
+    if (typing.isConnected) {
+  const status = typing.querySelector('.research-status');
+
+  if (status) {
+    status.textContent = 'Analisando os resultados...';
+  }
+}
   }
 
   // Envia a conversa para a inteligência artificial.
