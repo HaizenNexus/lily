@@ -24,21 +24,42 @@ export function describeError(err) {
 export const LilyService = {
   endpoint: '/api/chat',
   statusEndpoint: '/api/status',
-  getAccessCode: () => '',
+  getAccessCode: () => {
+  try {
+    return localStorage.getItem('lily:code') || '';
+  } catch {
+    return '';
+  }
+},
 
   /** Gerador assíncrono: cada `yield` é um pedaço de texto da resposta (streaming). */
-  async *stream({ messages, settings = {}, memories = [], signal }) {
+  async *stream({
+  messages,
+  settings = {},
+  memories = [],
+  researchContext = '',
+  signal
+}) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new LilyError('offline');
     let res;
     try {
       res = await fetch(this.endpoint, {
         method: 'POST', signal,
         headers: { 'Content-Type': 'application/json', 'x-lily-key': encodeURIComponent(this.getAccessCode()) },
-        body: JSON.stringify({
-          messages: messages.slice(-12),
-          settings: { userName: settings.userName, tone: settings.tone, expressions: settings.expressions },
-          memories: memories.map(m => m.text).slice(0, 20)
-        })
+       body: JSON.stringify({
+  messages: messages.slice(-12),
+
+  settings: {
+    userName: settings.userName,
+    tone: settings.tone,
+    expressions: settings.expressions
+  },
+
+  memories: memories.map(m => m.text).slice(0, 20),
+
+  // Resultados encontrados pela Tavily.
+  researchContext: String(researchContext || '').slice(0, 14000)
+})
       });
     } catch (e) {
       if (e.name === 'AbortError') throw e;

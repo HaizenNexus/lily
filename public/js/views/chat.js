@@ -1,6 +1,7 @@
 import { h, avatar, AVATAR, toast } from '../ui.js';
 import { state, save, current, newConv } from '../store.js';
 import { LilyService, describeError } from '../services/lily-service.js';
+import { ResearchService } from '../services/research-service.js';
 
 const GREETING = [
   'Olá, Evellin! Meu nome é Lily! :3',
@@ -71,18 +72,75 @@ export function chatView(root) {
     aborter = new AbortController();
     const history = c.messages.filter(m => m.role === 'user' || m.role === 'lily')
       .map(m => ({ role: m.role === 'lily' ? 'assistant' : 'user', content: m.text }));
-    let msg = null, bodyEl = null;
-    try {
-      for await (const chunk of LilyService.stream({ messages: history, settings: state.settings, memories: state.settings.useMemories ? state.memories : [], signal: aborter.signal })) {
-        if (!msg) { msg = { role: 'lily', text: '', ts: Date.now() }; c.messages.push(msg); typing.remove(); const row = bubble(msg); bodyEl = row.querySelector('.bubble'); thread.append(row); }
-        msg.text += chunk; bodyEl.textContent = msg.text; bottom();
-      }
-    } catch (err) {
+
+let msg = null, bodyEl = null;
+let researchContext = '';
+
+try {
+  // Verifica se a pergunta precisa de pesquisa na internet.
+  if (ResearchService.shouldResearch(text)) {
+    typing.querySelector('.dots')?.setAttribute(
+      'aria-label',
+      'A Lily está pesquisando na internet'
+    );
+
+    // Pesquisa na Tavily.
+    const research = await ResearchService.search(text, {
+      signal: aborter.signal
+    });
+
+    // Prepara os resultados para a inteligência artificial.
+    researchContext = ResearchService.formatForModel(research);
+  }
+
+  // Envia a conversa para a inteligência artificial.
+  for await (const chunk of LilyService.stream({
+    messages: history,
+    settings: state.settings,
+    memories: state.settings.useMemories ? state.memories : [],
+    researchContext,
+    signal: aborter.signal
+  })) {
+    if (!msg) {
+      msg = {
+        role: 'lily',
+        text: '',
+        ts: Date.now()
+      };
+
+      c.messages.push(msg);
       typing.remove();
-      if (err.name !== 'AbortError') c.messages.push({ role: 'notice', ts: Date.now(), text: describeError(err) });
-    } finally {
-      busy = false; c.updated = Date.now(); save(); draw(); grow();
+
+      const row = bubble(msg);
+      bodyEl = row.querySelector('.bubble');
+
+      thread.append(row);
     }
+
+    msg.text += chunk;
+    bodyEl.textContent = msg.text;
+    bottom();
+  }
+
+} catch (err) {
+  typing.remove();
+
+  if (err.name !== 'AbortError') {
+    c.messages.push({
+      role: 'notice',
+      ts: Date.now(),
+      text: describeError(err)
+    });
+  }
+
+} finally {
+  busy = false;
+  c.updated = Date.now();
+  save();
+  draw();
+  grow();
+}
+
   }
 
   root.append(h('div', { class: 'view' }, thread, h('div', { class: 'composer' }, form)));

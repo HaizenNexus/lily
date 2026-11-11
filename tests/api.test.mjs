@@ -58,7 +58,7 @@ test('streaming: devolve só o texto da resposta, ignora "reasoning", e chega em
   const res = await post(ok);
   assert.equal(res.status, 200);
   const reader = res.body.getReader(), dec = new TextDecoder(); const parts = [];
-  for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(dec.decode(value)); }
+  for (; ;) { const { done, value } = await reader.read(); if (done) break; parts.push(dec.decode(value)); }
   assert.equal(parts.join(''), 'Oi, Evellin! :3');
   assert.ok(parts.length >= 2, 'deveria vir em mais de um pedaço');
 });
@@ -71,7 +71,8 @@ test('envia à Groq: chave no servidor, system prompt, modelo e histórico limit
   const [sys, ...rest] = lastGroq.body.messages;
   assert.equal(sys.role, 'system');
   assert.match(sys.content, /LILY/); assert.match(sys.content, /frase cadastrada X/);
-  assert.match(sys.content, /NÃO tem acesso à internet/); assert.match(sys.content, /nunca finge ser ele/);
+  assert.match(sys.content, /não navega livremente pela internet por conta própria/);
+  assert.match(sys.content, /CONTEXTO DE PESQUISA NA INTERNET/); assert.match(sys.content, /nunca finge ser ele/);
   assert.match(sys.content, /Não use as carinhas/);
   assert.ok(rest.length <= 12); assert.equal(rest[0].role, 'user'); assert.equal(rest.at(-1).content, 'final');
 });
